@@ -41,23 +41,12 @@ async function runScribble() {
     let i = 0;
     while (i < code.length && running) {
         let line = code[i].trim();
-        if (!line || line.startsWith(">>")) { i++; continue; }
 
-        // Output
-        if (line.toLowerCase().startsWith("output[")) {
-            let out = line.slice(7, -1);
-            for (let v in variables) out = out.replace(`<var=${v}>`, variables[v]);
-            outputDiv.innerHTML += out + "<br>";
-        }
-
-        // Debug
-        else if (line.startsWith("Debug[")) {
-            let varName = line.slice(6, -1);
-            outputDiv.innerHTML += `Debug: ${varName} = ${variables[varName]}<br>`;
-        }
+        // Skip empty lines and comments >> ... <<
+        if (!line || (line.startsWith(">>") && line.endsWith("<<"))) { i++; continue; }
 
         // Variable assignment
-        else if (line.startsWith("var=")) {
+        if (line.startsWith("var=")) {
             let [varName, varVal] = line.split("=");
             varName = varName.slice(4).trim();
             varVal = varVal.trim().slice(2, -2);
@@ -68,11 +57,7 @@ async function runScribble() {
             else if (varVal.includes("math@results[")) {
                 let expr = varVal.split("math@results[")[1].split("]")[0];
                 for (let v in variables) expr = expr.replace(`<var=${v}>`, variables[v]);
-                try {
-                    variables[varName] = eval(expr);
-                } catch(e) {
-                    variables[varName] = 0;
-                }
+                try { variables[varName] = eval(expr); } catch(e) { variables[varName] = 0; }
             } 
             else if (varVal.includes("math@random[")) {
                 let [min,max] = varVal.split("math@random[")[1].split("]")[0].split("-").map(Number);
@@ -81,10 +66,32 @@ async function runScribble() {
             else {
                 variables[varName] = varVal;
             }
+            i++; 
+            continue;
+        }
+
+        // Output
+        if (line.toLowerCase().startsWith("output[")) {
+            let out = line.slice(7, -1);
+            for (let v in variables) {
+                let regex = new RegExp(`<var=${v}>`, "g");
+                out = out.replace(regex, variables[v]);
+            }
+            outputDiv.innerHTML += out + "<br>";
+            i++;
+            continue;
+        }
+
+        // Debug
+        if (line.startsWith("Debug[")) {
+            let varName = line.slice(6, -1);
+            outputDiv.innerHTML += `Debug: ${varName} = ${variables[varName]}<br>`;
+            i++;
+            continue;
         }
 
         // Function definition
-        else if (line.startsWith("function[")) {
+        if (line.startsWith("function[")) {
             let funcName = line.slice(9, -1);
             let funcBody = [];
             i++;
@@ -93,14 +100,18 @@ async function runScribble() {
                 i++;
             }
             functions[funcName] = funcBody;
+            i++;
+            continue;
         }
 
         // Function call
-        else if (line.startsWith("call[")) {
+        if (line.startsWith("call[")) {
             let funcName = line.slice(5, -1);
             if (functions[funcName]) {
                 await runFunction(functions[funcName], outputDiv);
             }
+            i++;
+            continue;
         }
 
         i++;
@@ -112,23 +123,12 @@ async function runScribble() {
 async function runFunction(funcCode, outputDiv) {
     for (let j = 0; j < funcCode.length && running; j++) {
         let line = funcCode[j].trim();
-        if (!line || line.startsWith(">>")) continue;
 
-        // Output
-        if (line.toLowerCase().startsWith("output[")) {
-            let out = line.slice(7, -1);
-            for (let v in variables) out = out.replace(`<var=${v}>`, variables[v]);
-            outputDiv.innerHTML += out + "<br>";
-        }
-
-        // Debug
-        else if (line.startsWith("Debug[")) {
-            let varName = line.slice(6, -1);
-            outputDiv.innerHTML += `Debug: ${varName} = ${variables[varName]}<br>`;
-        }
+        // Skip empty lines and comments
+        if (!line || (line.startsWith(">>") && line.endsWith("<<"))) continue;
 
         // Variable assignment
-        else if (line.startsWith("var=")) {
+        if (line.startsWith("var=")) {
             let [varName, varVal] = line.split("=");
             varName = varName.slice(4).trim();
             varVal = varVal.trim().slice(2, -2);
@@ -148,6 +148,25 @@ async function runFunction(funcCode, outputDiv) {
             else {
                 variables[varName] = varVal;
             }
+            continue;
+        }
+
+        // Output
+        if (line.toLowerCase().startsWith("output[")) {
+            let out = line.slice(7, -1);
+            for (let v in variables) {
+                let regex = new RegExp(`<var=${v}>`, "g");
+                out = out.replace(regex, variables[v]);
+            }
+            outputDiv.innerHTML += out + "<br>";
+            continue;
+        }
+
+        // Debug
+        if (line.startsWith("Debug[")) {
+            let varName = line.slice(6, -1);
+            outputDiv.innerHTML += `Debug: ${varName} = ${variables[varName]}<br>`;
+            continue;
         }
     }
 }
