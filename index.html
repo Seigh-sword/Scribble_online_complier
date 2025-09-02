@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scribble Online Compiler</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Scribble Online Compiler</h1>
+        <div class="editor-section">
+            <textarea id="scribbleCode" rows="20" cols="60">output["hello,world!"]</textarea>
+            <div class="buttons">
+                <button onclick="runScribble()">Run</button>
+                <button onclick="loadSample('samples/random_number_game.srb')">Random Game</button>
+                <button onclick="loadSample('samples/variables_demo.srb')">Variables Demo</button>
+                <button onclick="loadSample('samples/zombie_game.srb')">Zombie Game</button>
+            </div>
+        </div>
+        <div class="output-section">
+            <h2>Output</h2>
+            <div id="output"></div>
+        </div>
+    </div>
+    <script src="syntax.js"></script>
+</body>
+</html>
