@@ -73,10 +73,12 @@ async function runScribble() {
         // Output
         if (line.toLowerCase().startsWith("output[")) {
             let out = line.slice(7, -1);
-            for (let v in variables) {
-                let regex = new RegExp(`<var=${v}>`, "g");
-                out = out.replace(regex, variables[v]);
-            }
+
+            // Replace all <var=varName> with current value or blank if undefined
+            out = out.replace(/<var=([a-zA-Z0-9_]+)>/g, (match, p1) => {
+                return variables[p1] !== undefined ? variables[p1] : "";
+            });
+
             outputDiv.innerHTML += out + "<br>";
             i++;
             continue;
@@ -85,7 +87,7 @@ async function runScribble() {
         // Debug
         if (line.startsWith("Debug[")) {
             let varName = line.slice(6, -1);
-            outputDiv.innerHTML += `Debug: ${varName} = ${variables[varName]}<br>`;
+            outputDiv.innerHTML += `Debug: ${varName} = ${variables[varName] !== undefined ? variables[varName] : ""}<br>`;
             i++;
             continue;
         }
@@ -154,10 +156,9 @@ async function runFunction(funcCode, outputDiv) {
         // Output
         if (line.toLowerCase().startsWith("output[")) {
             let out = line.slice(7, -1);
-            for (let v in variables) {
-                let regex = new RegExp(`<var=${v}>`, "g");
-                out = out.replace(regex, variables[v]);
-            }
+            out = out.replace(/<var=([a-zA-Z0-9_]+)>/g, (match, p1) => {
+                return variables[p1] !== undefined ? variables[p1] : "";
+            });
             outputDiv.innerHTML += out + "<br>";
             continue;
         }
@@ -165,7 +166,7 @@ async function runFunction(funcCode, outputDiv) {
         // Debug
         if (line.startsWith("Debug[")) {
             let varName = line.slice(6, -1);
-            outputDiv.innerHTML += `Debug: ${varName} = ${variables[varName]}<br>`;
+            outputDiv.innerHTML += `Debug: ${varName} = ${variables[varName] !== undefined ? variables[varName] : ""}<br>`;
             continue;
         }
     }
