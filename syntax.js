@@ -1,54 +1,157 @@
 let variables = {};
+let functions = {};
+let running = false;
+let inputResolve = null;
 
-function runScribble() {
+async function getInput(varName) {
+    const popup = document.getElementById("inputPopup");
+    const userInput = document.getElementById("userInput");
+
+    popup.style.display = "flex";
+    userInput.value = "";
+    userInput.placeholder = `Enter ${varName}`;
+    userInput.focus();
+
+    return new Promise(resolve => {
+        inputResolve = (val) => {
+            popup.style.display = "none";
+            resolve(val);
+        };
+    });
+}
+
+function submitInput() {
+    if (inputResolve) {
+        const val = document.getElementById("userInput").value;
+        inputResolve(val);
+        inputResolve = null;
+    }
+}
+
+async function runScribble() {
+    if (running) return;
+    running = true;
+
     const code = document.getElementById("scribbleCode").value.split("\n");
-    let outputDiv = document.getElementById("output");
+    const outputDiv = document.getElementById("output");
     outputDiv.innerHTML = "";
     variables = {};
+    functions = {};
 
-    for (let i = 0; i < code.length; i++) {
+    let i = 0;
+    while (i < code.length && running) {
         let line = code[i].trim();
-        if (!line || line.startsWith(">>")) continue;
+        if (!line || line.startsWith(">>")) { i++; continue; }
 
         // Output
         if (line.toLowerCase().startsWith("output[")) {
             let out = line.slice(7, -1);
-            for (let v in variables) {
-                out = out.replace(`<var=${v}>`, variables[v]);
-            }
+            for (let v in variables) out = out.replace(`<var=${v}>`, variables[v]);
             outputDiv.innerHTML += out + "<br>";
+        }
+
+        // Debug
+        else if (line.startsWith("Debug[")) {
+            let varName = line.slice(6, -1);
+            outputDiv.innerHTML += `Debug: ${varName} = ${variables[varName]}<br>`;
         }
 
         // Variable assignment
         else if (line.startsWith("var=")) {
             let [varName, varVal] = line.split("=");
             varName = varName.slice(4).trim();
-            varVal = varVal.trim().slice(2, -2); // remove [""]
+            varVal = varVal.trim().slice(2, -2);
 
             if (varVal.includes("<input>")) {
-                variables[varName] = prompt("Enter " + varName);
-            } else if (varVal.includes("math@results[")) {
+                variables[varName] = await getInput(varName);
+            } 
+            else if (varVal.includes("math@results[")) {
                 let expr = varVal.split("math@results[")[1].split("]")[0];
                 for (let v in variables) expr = expr.replace(`<var=${v}>`, variables[v]);
-                variables[varName] = eval(expr);
-            } else if (varVal.includes("math@random[")) {
+                try {
+                    variables[varName] = eval(expr);
+                } catch(e) {
+                    variables[varName] = 0;
+                }
+            } 
+            else if (varVal.includes("math@random[")) {
                 let [min,max] = varVal.split("math@random[")[1].split("]")[0].split("-").map(Number);
                 variables[varName] = Math.floor(Math.random() * (max-min+1)) + min;
-            } else {
+            } 
+            else {
                 variables[varName] = varVal;
             }
         }
 
-        // TODO: Add if-then-else parser in v0.2
+        // Function definition
+        else if (line.startsWith("function[")) {
+            let funcName = line.slice(9, -1);
+            let funcBody = [];
+            i++;
+            while (i < code.length && !code[i].startsWith("endFunction")) {
+                funcBody.push(code[i]);
+                i++;
+            }
+            functions[funcName] = funcBody;
+        }
+
+        // Function call
+        else if (line.startsWith("call[")) {
+            let funcName = line.slice(5, -1);
+            if (functions[funcName]) {
+                await runFunction(functions[funcName], outputDiv);
+            }
+        }
+
+        i++;
+    }
+
+    running = false;
+}
+
+async function runFunction(funcCode, outputDiv) {
+    for (let j = 0; j < funcCode.length && running; j++) {
+        let line = funcCode[j].trim();
+        if (!line || line.startsWith(">>")) continue;
+
+        // Output
+        if (line.toLowerCase().startsWith("output[")) {
+            let out = line.slice(7, -1);
+            for (let v in variables) out = out.replace(`<var=${v}>`, variables[v]);
+            outputDiv.innerHTML += out + "<br>";
+        }
+
+        // Debug
+        else if (line.startsWith("Debug[")) {
+            let varName = line.slice(6, -1);
+            outputDiv.innerHTML += `Debug: ${varName} = ${variables[varName]}<br>`;
+        }
+
+        // Variable assignment
+        else if (line.startsWith("var=")) {
+            let [varName, varVal] = line.split("=");
+            varName = varName.slice(4).trim();
+            varVal = varVal.trim().slice(2, -2);
+
+            if (varVal.includes("<input>")) {
+                variables[varName] = await getInput(varName);
+            } 
+            else if (varVal.includes("math@results[")) {
+                let expr = varVal.split("math@results[")[1].split("]")[0];
+                for (let v in variables) expr = expr.replace(`<var=${v}>`, variables[v]);
+                try { variables[varName] = eval(expr); } catch(e){ variables[varName] = 0; }
+            } 
+            else if (varVal.includes("math@random[")) {
+                let [min,max] = varVal.split("math@random[")[1].split("]")[0].split("-").map(Number);
+                variables[varName] = Math.floor(Math.random() * (max-min+1)) + min;
+            } 
+            else {
+                variables[varName] = varVal;
+            }
+        }
     }
 }
 
-// Load sample .srb files (basic fetch)
-function loadSample(path) {
-    fetch(path)
-        .then(res => res.text())
-        .then(text => {
-            document.getElementById("scribbleCode").value = text;
-            document.getElementById("output").innerHTML = "";
-        });
+function stopScribble() {
+    running = false;
 }
