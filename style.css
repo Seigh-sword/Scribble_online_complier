@@ -42,6 +42,7 @@ button {
     background: #4caf50;
     color: white;
     cursor: pointer;
+    transition: 0.2s;
 }
 
 button:hover {
@@ -49,9 +50,19 @@ button:hover {
 }
 
 .output-section {
-    min-height: 150px;
+    min-height: 200px;
     overflow-y: auto;
     border: 1px solid #444;
     padding: 10px;
     background: #1b1b1b;
+}
+
+h1 {
+    text-align: center;
+    color: #f9a825;
+}
+
+h2 {
+    margin-bottom: 10px;
+    color: #ffd54f;
 }
