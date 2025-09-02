@@ -66,3 +66,25 @@ h2 {
     margin-bottom: 10px;
     color: #ffd54f;
 }
+.input-popup {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+#userInput {
+    flex: 1;
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #555;
+    background: #1e1e1e;
+    color: #f0f0f0;
+}
+
+.input-popup button {
+    background: #2196f3;
+}
+
+.input-popup button:hover {
+    background: #1976d2;
+}
